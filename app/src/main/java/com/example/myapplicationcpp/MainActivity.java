@@ -39,9 +39,18 @@ public class MainActivity extends AppCompatActivity {
     public native String stringFromJNI();
 
     public native void startSubThread();
-    
-    public void printTest(){
+
+    public void printTest() {
         Log.d(TAG, "printTest: ");
+    }
+
+    public void updateUI(){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                tv.setText(stringFromJNI());
+            }
+        });
     }
 
 }

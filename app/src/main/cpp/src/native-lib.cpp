@@ -16,6 +16,8 @@ struct my_param {
 
 JavaVM *jvm;
 
+int counter = 0;
+
 extern "C"
 JNIEXPORT jint JNI_OnLoad(JavaVM *javaVM, void *) {
     ::jvm = javaVM;
@@ -23,26 +25,32 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *javaVM, void *) {
     return JNI_VERSION_1_6;
 }
 
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_example_myapplicationcpp_MainActivity_stringFromJNI(JNIEnv *env, jobject job) {
-    std::string hello = "Hello from C++";
-    return env->NewStringUTF(hello.c_str());
+    char hello[20];
+    sprintf(hello, "Hello from C++%d", counter);
+
+    counter++;
+    return env->NewStringUTF(hello);
 }
 
 // 事实证明这里是ok的. 子线程
 void *sub_thread_process(void *args) {
 
     my_param *context = static_cast<my_param *>(args);
-    JNIEnv * jniEnv = nullptr;
+    JNIEnv *jniEnv = nullptr;
 
     jint attachResult = ::jvm->AttachCurrentThread(&jniEnv, nullptr);
-    if(attachResult!= JNI_OK){
+    if (attachResult != JNI_OK) {
         return nullptr;
     }
 
     jclass mainActivityCls = jniEnv->GetObjectClass(context->job);
 
-    jmethodID  method= jniEnv->GetMethodID(mainActivityCls, "printTest", "()V");
+    // jmethodID method = jniEnv->GetMethodID(mainActivityCls, "printTest", "()V");
+    jmethodID method = jniEnv->GetMethodID(mainActivityCls, "updateUI", "()V");
+
     int counterMax = 5;
 
     while (ifRunning) {
