@@ -4,6 +4,15 @@
 #include <unistd.h>
 #include <android/log.h>
 
+extern "C" {
+#include <netinet/ip.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+}
+
 #define TAG_CPP "native"
 #define LOG_NATIVE(...)  __android_log_print(ANDROID_LOG_DEBUG, TAG_CPP, __VA_ARGS__);
 
@@ -15,6 +24,8 @@ struct my_param {
 };
 
 JavaVM *jvm;
+
+void *rev_udp_data_thread(void *args);
 
 int counter = 0;
 
@@ -78,12 +89,54 @@ Java_com_example_myapplicationcpp_MainActivity_startSubThread(JNIEnv *env, jobje
     my_param *myParam = new my_param;
 
     // jvm->GetEnv(static_cast<void *> myParam->env, JNI_VERSION_1_6);
-
     // jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
     myParam->env = env;
     myParam->job = env->NewGlobalRef(thiz); // 把局部成员 提升为 全局成员
-    pthread_create(&ptid, NULL, sub_thread_process, myParam);
 
+    // pthread_create(&ptid, NULL, sub_thread_process, myParam);
     // delete (myParam);
 
+    pthread_create(&ptid, NULL, rev_udp_data_thread, NULL);
+
+}
+
+void *rev_udp_data_thread(void *args) {
+    struct sockaddr_in addr;
+    int sockfd, len = 0;
+    int addr_len = sizeof(struct sockaddr_in);
+    char buffer[256];
+
+    bool ifRunning = true;
+    /* 建立socket，注意必须是SOCK_DGRAM */
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("socket");
+        exit(1);
+    }
+
+    /* 填写sockaddr_in 结构 */
+    bzero(&addr, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(28000);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);// 接收任意IP发来的数据
+
+    /* 绑定socket */
+    if (bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        perror("connect");
+        exit(1);
+    }
+
+    while (ifRunning) {
+        bzero(buffer, sizeof(buffer));
+        // len = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *) &addr, &addr_len);
+        if (len) {
+            LOG_NATIVE("Received %d", len);
+        }
+        /* 显示client端的网络地址和收到的字符串消息 */
+
+        // printf("Received a string from client %s, string is: %s\n", inet_ntoa(addr.sin_addr), buffer);
+        /* 将收到的字符串消息返回给client端 */
+        // sendto(sockfd, buffer, len, 0, (struct sockaddr *) &addr, addr_len);
+    }
+
+    return nullptr;
 }

@@ -20,7 +20,6 @@ add_library( # Sets the name of the library. 设置库名称
         SHARED
         # Provides a relative path to your source file(s).  指定源文件
         test-lib.cpp)
-
 # add_library(myapplicationcpp)
 
 target_link_libraries( # Specifies the target library.
